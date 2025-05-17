@@ -1,61 +1,67 @@
-# Obsidian 列表热图插件
+# Obsidian List Heatmap Plugin
+[中文版](/README_zh.md)
 
-这是一个 Obsidian 插件，用于统计日记文件中特定标题下的无序列表数量，并以 GitHub 热图样式在侧边栏面板中展示。
+This is an Obsidian plugin that counts the number of unordered lists under specific headings in daily note files and displays the statistics in a GitHub-style heatmap in the sidebar panel.
 
-## 功能特点
+![](image/image.png)
 
-- 统计指定路径下日记文件（YYYY-MM-DD格式）中用户自定义标题下的无序列表数量
-- 以 GitHub 热图样式在侧边栏面板中可视化展示统计数据
-- 支持年视图和月视图两种展示方式
-- 支持自定义热图颜色范围
-- 数据支持本地持久化缓存
-- 提供手动刷新功能
-- 当更改路径或统计标题时自动清除缓存
+> [!TIP]
+> This plugin is developed by an LLM. If you encounter any issues during use, you can fix them with the help of an LLM.
 
-## 安装方法
+## Features
+![](image/image_01.png)
+- Counts the number of unordered lists under user-defined headings in daily note files (YYYY-MM-DD format) within a specified path
+- Visualizes the statistics in a GitHub-style heatmap in the sidebar panel
+- Supports both yearly and monthly views
+- Supports custom heatmap color ranges
+- Data is locally cached for persistence
+- Provides manual refresh functionality
+- Automatically clears the cache when the path or heading is changed
 
-### 手动安装
+## Installation
 
-1. 下载最新版本的发布包
-2. 解压缩下载的文件
-3. 将解压后的文件夹复制到 Obsidian 插件目录（`.obsidian/plugins/`）中
-4. 在 Obsidian 中启用插件
+### Manual Installation
 
-### 通过 BRAT 安装
+1. Download the latest release package
+2. Unzip the downloaded file
+3. Copy the unzipped folder to the Obsidian plugins directory (`.obsidian/plugins/`)
+4. Enable the plugin in Obsidian
 
-1. 安装 [BRAT](https://github.com/TfTHacker/obsidian42-brat) 插件
-2. 在 BRAT 设置中添加此仓库地址
-3. 在 Obsidian 中启用插件
+### Install via BRAT
 
-## 使用方法
+1. Install the [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin
+2. Add this repository address in the BRAT settings
+3. Enable the plugin in Obsidian
 
-1. 安装并启用插件后，在 Obsidian 右侧边栏会出现一个日历图标
-2. 点击图标打开列表热图面板
-3. 在插件设置中配置日记文件夹路径和要统计的标题
-4. 热图将自动显示每日无序列表的数量统计
+## Usage
 
-## 配置选项
+1. After installing and enabling the plugin, a calendar icon will appear in the right sidebar of Obsidian
+2. Click the icon to open the List Heatmap panel
+3. Configure the daily notes folder path and the headings to be counted in the plugin settings
+4. The heatmap will automatically display the daily unordered list statistics
 
-- **日记文件夹路径**：指定包含日记文件的文件夹路径
-- **统计标题**：指定要统计无序列表的标题（用逗号分隔多个标题）
-- **热图颜色设置**：自定义热图颜色范围
-- **默认视图**：设置热图默认显示的时间范围（年视图或月视图）
-- **启用缓存**：启用数据缓存以提高性能
+## Configuration Options
 
-## 开发
+- **Daily Notes Folder Path**: Specify the folder path containing your daily note files
+- **Counted Headings**: Specify the headings under which unordered lists are counted (separate multiple headings with commas)
+- **Heatmap Color Settings**: Customize the heatmap color range
+- **Default View**: Set the default time range for the heatmap (yearly or monthly view)
+- **Enable Cache**: Enable data caching to improve performance
 
-### 前提条件
+## Development
+
+### Prerequisites
 
 - [Node.js](https://nodejs.org/)
-- [pnpm](https://pnpm.io/) (推荐) 或 npm
+- [pnpm](https://pnpm.io/) (recommended) or npm
 
-### 本地开发
+### Local Development
 
-1. 克隆此仓库
-2. 安装依赖：`pnpm install` 或 `npm install`
-3. 构建插件：`pnpm build` 或 `npm run build`
-4. 开发模式：`pnpm dev` 或 `npm run dev`
+1. Clone this repository
+2. Install dependencies: `pnpm install` or `npm install`
+3. Build the plugin: `pnpm build` or `npm run build`
+4. Development mode: `pnpm dev` or `npm run dev`
 
-## 许可证
+## License
 
 [MIT](LICENSE)
