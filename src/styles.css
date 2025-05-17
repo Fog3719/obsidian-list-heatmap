@@ -1,0 +1,115 @@
+.list-heatmap-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 10px;
+    font-size: 14px;
+}
+
+.list-heatmap-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.list-heatmap-view-toggle {
+    display: flex;
+    gap: 5px;
+}
+
+.list-heatmap-view-toggle button {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.list-heatmap-view-toggle button.active {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+.list-heatmap-time-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.list-heatmap-time-nav button {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.list-heatmap-refresh-btn {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.list-heatmap-chart {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+    padding: 10px 0;
+}
+
+.list-heatmap-chart svg {
+    min-width: 650px;
+}
+
+.list-heatmap-no-data {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    text-align: center;
+    color: var(--text-muted);
+    padding: 20px;
+}
+
+.list-heatmap-last-updated {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: right;
+    margin-top: 10px;
+}
+
+.weekday-label, .month-label {
+    font-size: 12px;
+    fill: var(--text-muted);
+}
+
+/* 适配暗色主题 */
+.theme-dark .day[fill="#ebedf0"] {
+    fill: #2d333b;
+}
+
+/* 设置面板样式 */
+.list-heatmap-setting-item {
+    margin-bottom: 20px;
+}
+
+.list-heatmap-color-preview {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    margin-right: 5px;
+    vertical-align: middle;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .list-heatmap-controls {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .list-heatmap-chart svg {
+        min-width: 100%;
+    }
+}

@@ -1,0 +1,10 @@
+{
+  "id": "obsidian-list-heatmap",
+  "name": "List Heatmap",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "统计日记文件中特定标题下的无序列表数量并以GitHub热图样式显示",
+  "author": "",
+  "authorUrl": "",
+  "isDesktopOnly": false
+}
