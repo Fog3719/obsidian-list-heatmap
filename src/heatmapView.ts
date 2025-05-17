@@ -8,7 +8,7 @@ export const VIEW_TYPE_HEATMAP = 'list-heatmap-view';
 
 export class HeatmapView extends ItemView {
     private plugin: ListHeatmapPlugin;
-    private contentEl: HTMLElement;
+    public contentEl: HTMLElement;
     private heatmapContainer: HTMLElement;
     private controlsContainer: HTMLElement;
     private currentView: 'year' | 'month';
@@ -30,7 +30,7 @@ export class HeatmapView extends ItemView {
     }
 
     getDisplayText(): string {
-        return '列表热图';
+        return 'List Heatmap';
     }
 
     async onOpen(): Promise<void> {
@@ -77,7 +77,7 @@ export class HeatmapView extends ItemView {
         // 如果仍然没有数据，显示提示信息
         if (!data) {
             this.heatmapContainer.createEl('div', { 
-                text: '没有数据可显示。请确保设置了正确的日记文件夹路径和统计标题，然后点击刷新按钮。',
+                text: 'No data to display. Please ensure correct diary folder path and headings are set, then click refresh button.',
                 cls: 'list-heatmap-no-data'
             });
             return;
@@ -95,7 +95,7 @@ export class HeatmapView extends ItemView {
         if (lastUpdated) {
             const dateStr = new Date(lastUpdated).toLocaleString();
             this.contentEl.createEl('div', { 
-                text: `最后更新: ${dateStr}`,
+                text: `Last updated: ${dateStr}`,
                 cls: 'list-heatmap-last-updated'
             });
         }
@@ -113,7 +113,7 @@ export class HeatmapView extends ItemView {
         
         // 年视图按钮
         const yearBtn = viewToggle.createEl('button', { 
-            text: '年视图',
+            text: 'Year view',
             cls: this.currentView === 'year' ? 'active' : ''
         });
         yearBtn.addEventListener('click', () => {
@@ -123,7 +123,7 @@ export class HeatmapView extends ItemView {
         
         // 月视图按钮
         const monthBtn = viewToggle.createEl('button', { 
-            text: '月视图',
+            text: 'Month view',
             cls: this.currentView === 'month' ? 'active' : ''
         });
         monthBtn.addEventListener('click', () => {
@@ -153,7 +153,7 @@ export class HeatmapView extends ItemView {
         const currentTime = timeNav.createEl('span', { 
             text: this.currentView === 'year' 
                 ? `${this.currentYear}` 
-                : `${this.currentYear}年${this.currentMonth}月`
+                : `${this.currentYear} ${this.currentMonth}`
         });
         
         // 下一年/月按钮
@@ -173,7 +173,7 @@ export class HeatmapView extends ItemView {
         
         // 刷新按钮
         const refreshBtn = this.controlsContainer.createEl('button', { 
-            text: '刷新数据',
+            text: 'Refresh data',
             cls: 'list-heatmap-refresh-btn'
         });
         refreshBtn.addEventListener('click', async () => {
@@ -208,7 +208,7 @@ export class HeatmapView extends ItemView {
             .attr('transform', `translate(${margin.left},${margin.top})`);
         
         // 创建星期标签
-        const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+        const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         svg.selectAll('.weekday-label')
             .data(weekdays)
             .enter()
@@ -221,7 +221,7 @@ export class HeatmapView extends ItemView {
             .text(d => d);
         
         // 创建月份标签
-        const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const monthPositions = this.getMonthPositions(this.currentYear);
         
         svg.selectAll('.month-label')
@@ -250,7 +250,7 @@ export class HeatmapView extends ItemView {
             .attr('rx', 2)
             .attr('ry', 2)
             .append('title')
-            .text(d => `${d.date}: ${d.count} 个列表项`);
+            .text(d => `${d.date}: ${d.count} items`);
     }
 
     /**
@@ -296,6 +296,7 @@ export class HeatmapView extends ItemView {
             .text(d => d);
         
         // 创建日期单元格
+        const view = this;
         svg.selectAll('.day')
             .data(monthData)
             .enter()
@@ -312,7 +313,7 @@ export class HeatmapView extends ItemView {
                     .append('rect')
                     .attr('width', cellSize)
                     .attr('height', cellSize)
-                    .attr('fill', d.count > 0 ? d3.heatmapView.getColorForCount(d.count) : '#f0f0f0')
+                    .attr('fill', d.count > 0 ? view.getColorForCount(d.count) : '#f0f0f0')
                     .attr('rx', 4)
                     .attr('ry', 4);
                 

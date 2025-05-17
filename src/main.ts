@@ -26,14 +26,14 @@ export default class ListHeatmapPlugin extends Plugin {
 		);
 
 		// 添加侧边栏图标
-		this.addRibbonIcon('calendar-with-checkmark', '列表热图', () => {
+		this.addRibbonIcon('calendar-with-checkmark', 'List Heatmap', () => {
 			this.activateView();
 		});
 
 		// 添加命令
 		this.addCommand({
 			id: 'refresh-list-heatmap',
-			name: '刷新列表热图',
+			name: 'Refresh List Heatmap',
 			callback: () => {
 				this.refreshData();
 			},
@@ -83,11 +83,16 @@ export default class ListHeatmapPlugin extends Plugin {
 		
 		if (!leaf) {
 			// 创建新的侧边栏视图
-			leaf = workspace.getRightLeaf(false);
-			await leaf.setViewState({
-				type: VIEW_TYPE_HEATMAP,
-				active: true,
-			});
+			leaf = workspace.getRightLeaf(false) || workspace.getLeaf(false);
+			if (leaf) {
+				await leaf.setViewState({
+					type: VIEW_TYPE_HEATMAP,
+					active: true,
+				});
+			} else {
+				console.error('Failed to create new leaf for heatmap view');
+				return;
+			}
 		}
 		
 		// 激活视图
@@ -117,12 +122,12 @@ class ListHeatmapSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl('h2', { text: '列表热图设置' });
+		containerEl.createEl('h2', { text: 'List Heatmap Settings' });
 
 		// 日记文件夹路径设置
 		new Setting(containerEl)
-			.setName('日记文件夹路径')
-			.setDesc('指定包含日记文件的文件夹路径')
+			.setName('Diary folder path')
+			.setDesc('Specify the folder path containing diary files')
 			.addText(text => text
 				.setPlaceholder('例如: 日记/')
 				.setValue(this.plugin.settings.diaryFolderPath)
@@ -137,8 +142,8 @@ class ListHeatmapSettingTab extends PluginSettingTab {
 
 		// 自定义标题设置
 		new Setting(containerEl)
-			.setName('统计标题')
-			.setDesc('指定要统计无序列表的标题（用逗号分隔多个标题）')
+			.setName('Count headings')
+			.setDesc('Specify headings to count unordered lists under (comma separated)')
 			.addText(text => text
 				.setPlaceholder('例如: 今日任务, 待办事项')
 				.setValue(this.plugin.settings.customTitles.join(', '))
@@ -154,8 +159,8 @@ class ListHeatmapSettingTab extends PluginSettingTab {
 
 		// 热图颜色范围设置
 		new Setting(containerEl)
-			.setName('热图颜色设置')
-			.setDesc('设置热图颜色范围（格式：1-5:#FF6B6B,6-10:#FF8E8E,...）')
+			.setName('Heatmap color settings')
+			.setDesc('Configure heatmap color ranges (format: 1-5:#FF6B6B,6-10:#FF8E8E,...)')
 			.addText(text => text
 				.setPlaceholder('例如: 1-5:#FF6B6B,6-10:#FF8E8E,11-15:#FFA5A5,16-20:#FFC7C7,21+:#FFE8E8')
 				.setValue(this.plugin.settings.colorRanges.map(range => 
@@ -188,11 +193,11 @@ class ListHeatmapSettingTab extends PluginSettingTab {
 
 		// 默认视图设置
 		new Setting(containerEl)
-			.setName('默认视图')
-			.setDesc('设置热图默认显示的时间范围')
+			.setName('Default view')
+			.setDesc('Set default time range for heatmap display')
 			.addDropdown(dropdown => dropdown
-				.addOption('year', '年视图')
-				.addOption('month', '月视图')
+				.addOption('year', 'Year view')
+				.addOption('month', 'Month view')
 				.setValue(this.plugin.settings.defaultView)
 				.onChange(async (value: 'year' | 'month') => {
 					this.plugin.settings.defaultView = value;
@@ -202,8 +207,8 @@ class ListHeatmapSettingTab extends PluginSettingTab {
 
 		// 缓存设置
 		new Setting(containerEl)
-			.setName('启用缓存')
-			.setDesc('启用数据缓存以提高性能')
+			.setName('Enable cache')
+			.setDesc('Enable data caching for better performance')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.cacheEnabled)
 				.onChange(async (value) => {
@@ -216,10 +221,10 @@ class ListHeatmapSettingTab extends PluginSettingTab {
 
 		// 手动刷新按钮
 		new Setting(containerEl)
-			.setName('刷新数据')
-			.setDesc('手动刷新列表统计数据')
+			.setName('Refresh data')
+			.setDesc('Manually refresh list statistics')
 			.addButton(button => button
-				.setButtonText('刷新')
+				.setButtonText('Refresh')
 				.onClick(async () => {
 					await this.plugin.refreshData();
 				}));
