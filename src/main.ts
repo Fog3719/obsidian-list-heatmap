@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting, TFile, TFolder, WorkspaceLeaf } from 'obsidian';
+import { App, Plugin, PluginSettingTab, Setting, TFile, TFolder, WorkspaceLeaf, ColorComponent } from 'obsidian';
 import { ListHeatmapSettings, DEFAULT_SETTINGS } from './settings';
 import { FileParser } from './fileParser';
 import { ListCounter } from './listCounter';
@@ -12,25 +12,29 @@ export default class ListHeatmapPlugin extends Plugin {
 	dataCache: DataCache;
 
 	async onload() {
+		// Load settings first before initializing other components
 		await this.loadSettings();
 
-		// 初始化各模块
+		// Initialize modules
 		this.fileParser = new FileParser(this.app);
 		this.listCounter = new ListCounter();
 		this.dataCache = new DataCache(this);
+		
+		// Set file parser
+		this.listCounter.setFileParser(this.fileParser);
 
-		// 注册视图
+		// Register view
 		this.registerView(
 			VIEW_TYPE_HEATMAP,
 			(leaf) => new HeatmapView(leaf, this)
 		);
 
-		// 添加侧边栏图标
+		// Add sidebar icon
 		this.addRibbonIcon('calendar-with-checkmark', 'List Heatmap', () => {
 			this.activateView();
 		});
 
-		// 添加命令
+		// Add commands
 		this.addCommand({
 			id: 'refresh-list-heatmap',
 			name: 'Refresh List Heatmap',
@@ -39,11 +43,8 @@ export default class ListHeatmapPlugin extends Plugin {
 			},
 		});
 
-		// 添加设置选项卡
+		// Add settings tab
 		this.addSettingTab(new ListHeatmapSettingTab(this.app, this));
-
-		// 初始加载数据
-		this.loadData();
 	}
 
 	onunload() {
@@ -51,61 +52,97 @@ export default class ListHeatmapPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		// Load saved data with explicit key
+		const savedData = await this.loadData();
+		
+		// Merge with default settings, ensuring all required fields exist
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, savedData || {});
+		
+		// Log loaded settings for debugging
+		console.log('List Heatmap: Settings loaded', this.settings);
 	}
 
 	async saveSettings() {
+		// Save settings with explicit key
 		await this.saveData(this.settings);
+		console.log('List Heatmap: Settings saved', this.settings);
 	}
 
 	async refreshData() {
-		// 获取日记文件
+		// Get diary files
 		const diaryFiles = await this.fileParser.getDiaryFiles(this.settings.diaryFolderPath);
 		
-		// 统计列表数量
+		// Count lists
 		const listCounts = await this.listCounter.countLists(
 			diaryFiles, 
 			this.settings.customTitles
 		);
 		
-		// 更新缓存
+		// Update cache
 		await this.dataCache.updateCache(listCounts, this.settings);
 		
-		// 刷新视图
+		// Refresh view
 		this.refreshView();
 	}
 
 	async activateView() {
 		const { workspace } = this.app;
 		
-		// 检查是否已有视图
+		// Check if view already exists
 		let leaf = workspace.getLeavesOfType(VIEW_TYPE_HEATMAP)[0];
 		
 		if (!leaf) {
-			// 创建新的侧边栏视图
-			leaf = workspace.getRightLeaf(false) || workspace.getLeaf(false);
-			if (leaf) {
+			// Create new sidebar view
+			const rightLeaf = workspace.getRightLeaf(false);
+			if (rightLeaf) {
+				leaf = rightLeaf;
 				await leaf.setViewState({
 					type: VIEW_TYPE_HEATMAP,
 					active: true,
 				});
-			} else {
-				console.error('Failed to create new leaf for heatmap view');
-				return;
 			}
 		}
 		
-		// 激活视图
-		workspace.revealLeaf(leaf);
+		// Activate view
+		if (leaf) {
+			workspace.revealLeaf(leaf);
+		}
 	}
 
 	refreshView() {
-		// 刷新所有热图视图
+		// Refresh all heatmap views
 		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_HEATMAP);
 		for (const leaf of leaves) {
 			if (leaf.view instanceof HeatmapView) {
 				leaf.view.refresh();
 			}
+		}
+	}
+	
+	// Get diary filename
+	getDiaryFilename(date: string): string | undefined {
+		// Build possible filename format
+		const possibleFilename = `${date}.md`;
+		
+		// Get diary folder
+		const folder = this.app.vault.getAbstractFileByPath(this.settings.diaryFolderPath);
+		if (!folder || !(folder instanceof TFolder)) {
+			return undefined;
+		}
+		
+		// Find matching file
+		const file = folder.children.find(file => 
+			file instanceof TFile && file.name === possibleFilename
+		);
+		
+		return file ? file.path : undefined;
+	}
+	
+	// Open diary file
+	openDiaryFile(filePath: string): void {
+		const file = this.app.vault.getAbstractFileByPath(filePath);
+		if (file instanceof TFile) {
+			this.app.workspace.getLeaf().openFile(file);
 		}
 	}
 }
@@ -124,15 +161,15 @@ class ListHeatmapSettingTab extends PluginSettingTab {
 
 		containerEl.createEl('h2', { text: 'List Heatmap Settings' });
 
-		// 日记文件夹路径设置
+		// Diary folder path setting
 		new Setting(containerEl)
-			.setName('Diary folder path')
+			.setName('Diary Folder Path')
 			.setDesc('Specify the folder path containing diary files')
 			.addText(text => text
-				.setPlaceholder('例如: 日记/')
+				.setPlaceholder('Example: Diary/')
 				.setValue(this.plugin.settings.diaryFolderPath)
 				.onChange(async (value) => {
-					// 如果路径变更，清除缓存
+					// If path changes, clear cache
 					if (value !== this.plugin.settings.diaryFolderPath) {
 						await this.plugin.dataCache.clearCache();
 					}
@@ -140,16 +177,16 @@ class ListHeatmapSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		// 自定义标题设置
+		// Custom titles setting
 		new Setting(containerEl)
-			.setName('Count headings')
-			.setDesc('Specify headings to count unordered lists under (comma separated)')
+			.setName('Count Titles')
+			.setDesc('Specify titles under which to count unordered lists (separate multiple titles with commas)')
 			.addText(text => text
-				.setPlaceholder('例如: 今日任务, 待办事项')
+				.setPlaceholder('Example: Daily Tasks, To-Do Items')
 				.setValue(this.plugin.settings.customTitles.join(', '))
 				.onChange(async (value) => {
 					const newTitles = value.split(',').map(t => t.trim()).filter(t => t);
-					// 如果标题变更，清除缓存
+					// If titles change, clear cache
 					if (JSON.stringify(newTitles) !== JSON.stringify(this.plugin.settings.customTitles)) {
 						await this.plugin.dataCache.clearCache();
 					}
@@ -157,47 +194,50 @@ class ListHeatmapSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		// 热图颜色范围设置
-		new Setting(containerEl)
-			.setName('Heatmap color settings')
-			.setDesc('Configure heatmap color ranges (format: 1-5:#FF6B6B,6-10:#FF8E8E,...)')
-			.addText(text => text
-				.setPlaceholder('例如: 1-5:#FF6B6B,6-10:#FF8E8E,11-15:#FFA5A5,16-20:#FFC7C7,21+:#FFE8E8')
-				.setValue(this.plugin.settings.colorRanges.map(range => 
-					`${range.min}-${range.max === Number.MAX_SAFE_INTEGER ? '+' : range.max}:${range.color}`
-				).join(','))
-				.onChange(async (value) => {
-					try {
-						const ranges = value.split(',').map(range => {
-							const [rangeStr, color] = range.split(':');
-							let min = 1, max = Number.MAX_SAFE_INTEGER;
-							
-							if (rangeStr.includes('-')) {
-								const [minStr, maxStr] = rangeStr.split('-');
-								min = parseInt(minStr.trim());
-								max = maxStr.trim() === '+' ? Number.MAX_SAFE_INTEGER : parseInt(maxStr.trim());
-							} else {
-								min = max = parseInt(rangeStr.trim());
-							}
-							
-							return { min, max, color: color.trim() };
-						});
-						
-						this.plugin.settings.colorRanges = ranges;
-						await this.plugin.saveSettings();
-						this.plugin.refreshView();
-					} catch (e) {
-						console.error('颜色范围格式错误', e);
-					}
-				}));
+		// Heatmap color range settings - using table layout
+		containerEl.createEl('h3', { text: 'Heatmap Color Settings' });
+		
+		// Create color settings table
+		const colorTable = containerEl.createEl('table', { cls: 'list-heatmap-color-table' });
+		const headerRow = colorTable.createEl('tr');
+		headerRow.createEl('th', { text: 'List Count Range' });
+		headerRow.createEl('th', { text: 'Color' });
+		
+		// Add existing color ranges
+		this.plugin.settings.colorRanges.forEach((range, index) => {
+			this.addColorRangeRow(colorTable, range, index);
+		});
+		
+		// Add button row
+		const buttonRow = colorTable.createEl('tr');
+		const buttonCell = buttonRow.createEl('td', { attr: { colspan: '2' } });
+		
+		// Add new range button
+		const addButton = buttonCell.createEl('button', { 
+			text: 'Add New Range',
+			cls: 'list-heatmap-add-range-btn'
+		});
+		addButton.addEventListener('click', async () => {
+			const newRange = { 
+				min: this.plugin.settings.colorRanges.length > 0 ? 
+					this.plugin.settings.colorRanges[this.plugin.settings.colorRanges.length - 1].max + 1 : 1, 
+				max: this.plugin.settings.colorRanges.length > 0 ? 
+					this.plugin.settings.colorRanges[this.plugin.settings.colorRanges.length - 1].max + 5 : 5, 
+				color: '#FFE8E8' 
+			};
+			this.plugin.settings.colorRanges.push(newRange);
+			this.addColorRangeRow(colorTable, newRange, this.plugin.settings.colorRanges.length - 1);
+			await this.plugin.saveSettings();
+			this.plugin.refreshView();
+		});
 
-		// 默认视图设置
+		// Default view setting
 		new Setting(containerEl)
-			.setName('Default view')
-			.setDesc('Set default time range for heatmap display')
+			.setName('Default View')
+			.setDesc('Set the default time range for the heatmap display')
 			.addDropdown(dropdown => dropdown
-				.addOption('year', 'Year view')
-				.addOption('month', 'Month view')
+				.addOption('year', 'Year View')
+				.addOption('month', 'Month View')
 				.setValue(this.plugin.settings.defaultView)
 				.onChange(async (value: 'year' | 'month') => {
 					this.plugin.settings.defaultView = value;
@@ -205,10 +245,10 @@ class ListHeatmapSettingTab extends PluginSettingTab {
 					this.plugin.refreshView();
 				}));
 
-		// 缓存设置
+		// Cache setting
 		new Setting(containerEl)
-			.setName('Enable cache')
-			.setDesc('Enable data caching for better performance')
+			.setName('Enable Cache')
+			.setDesc('Enable data caching to improve performance')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.cacheEnabled)
 				.onChange(async (value) => {
@@ -219,14 +259,101 @@ class ListHeatmapSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		// 手动刷新按钮
+		// Manual refresh button
 		new Setting(containerEl)
-			.setName('Refresh data')
-			.setDesc('Manually refresh list statistics')
+			.setName('Refresh Data')
+			.setDesc('Manually refresh list count data')
 			.addButton(button => button
 				.setButtonText('Refresh')
 				.onClick(async () => {
 					await this.plugin.refreshData();
 				}));
+	}
+	
+	// Add color range row
+	private addColorRangeRow(table: HTMLTableElement, range: {min: number, max: number, color: string}, index: number): void {
+		const row = table.createEl('tr');
+		
+		// Range input cell
+		const rangeCell = row.createEl('td');
+		const minInput = rangeCell.createEl('input', { 
+			type: 'number',
+			value: range.min.toString(),
+			cls: 'list-heatmap-range-input'
+		});
+		rangeCell.createSpan({ text: ' - ' });
+		
+		const maxInput = rangeCell.createEl('input', { 
+			type: 'number',
+			value: range.max === Number.MAX_SAFE_INTEGER ? '' : range.max.toString(),
+			placeholder: '+',
+			cls: 'list-heatmap-range-input'
+		});
+		
+		// Color picker cell
+		const colorCell = row.createEl('td');
+		const colorPreview = colorCell.createEl('span', { 
+			cls: 'list-heatmap-color-preview',
+			attr: { style: `background-color: ${range.color}` }
+		});
+		
+		const colorInput = colorCell.createEl('input', { 
+			cls: 'list-heatmap-color-input',
+			type: 'text',
+			value: range.color
+		});
+		
+		// Create color picker
+		const colorPicker = new ColorComponent(colorCell);
+		colorPicker.setValue(range.color);
+		colorPicker.onChange(async (value) => {
+			this.plugin.settings.colorRanges[index].color = value;
+			colorPreview.style.backgroundColor = value;
+			colorInput.value = value;
+			await this.plugin.saveSettings();
+			this.plugin.refreshView();
+		});
+		
+		// Delete button
+		const deleteBtn = colorCell.createEl('button', { 
+			text: 'Delete',
+			cls: 'list-heatmap-delete-range-btn'
+		});
+		deleteBtn.addEventListener('click', async () => {
+			this.plugin.settings.colorRanges.splice(index, 1);
+			row.remove();
+			await this.plugin.saveSettings();
+			this.plugin.refreshView();
+			// Redisplay settings panel to update indices
+			this.display();
+		});
+		
+		// Listen for range input changes
+		minInput.addEventListener('change', async () => {
+			const min = parseInt(minInput.value);
+			if (!isNaN(min)) {
+				this.plugin.settings.colorRanges[index].min = min;
+				await this.plugin.saveSettings();
+				this.plugin.refreshView();
+			}
+		});
+		
+		maxInput.addEventListener('change', async () => {
+			const max = maxInput.value ? parseInt(maxInput.value) : Number.MAX_SAFE_INTEGER;
+			if (!isNaN(max)) {
+				this.plugin.settings.colorRanges[index].max = max;
+				await this.plugin.saveSettings();
+				this.plugin.refreshView();
+			}
+		});
+		
+		// Listen for color input changes
+		colorInput.addEventListener('change', async () => {
+			this.plugin.settings.colorRanges[index].color = colorInput.value;
+			colorPreview.style.backgroundColor = colorInput.value;
+			colorPicker.setValue(colorInput.value);
+			await this.plugin.saveSettings();
+			this.plugin.refreshView();
+		});
 	}
 }

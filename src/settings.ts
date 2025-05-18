@@ -1,18 +1,14 @@
 export interface ListHeatmapSettings {
-    diaryFolderPath: string;          // Diary folder path
-    customTitles: string[];           // Custom headings
-    colorRanges: {                    // Heatmap color ranges
-        min: number;
-        max: number;
-        color: string;
-    }[];
-    defaultView: 'year' | 'month';    // Default view
-    cacheEnabled: boolean;            // Enable cache
+    diaryFolderPath: string;
+    customTitles: string[];
+    colorRanges: Array<{min: number, max: number, color: string}>;
+    defaultView: 'year' | 'month';
+    cacheEnabled: boolean;
 }
 
 export const DEFAULT_SETTINGS: ListHeatmapSettings = {
-    diaryFolderPath: 'diary/',
-    customTitles: ['Today\'s tasks', 'Todo items'],
+    diaryFolderPath: 'Diary/',
+    customTitles: ['Daily Tasks', 'To-Do'],
     colorRanges: [
         { min: 1, max: 5, color: '#FFE8E8' },
         { min: 6, max: 10, color: '#FFC7C7' },
@@ -22,4 +18,4 @@ export const DEFAULT_SETTINGS: ListHeatmapSettings = {
     ],
     defaultView: 'year',
     cacheEnabled: true
-};
+}

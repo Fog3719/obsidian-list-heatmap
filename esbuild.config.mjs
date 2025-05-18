@@ -1,6 +1,6 @@
-const esbuild = require('esbuild');
-const copy = require('esbuild-plugin-copy').default;
-const process = require('process');
+import * as esbuild from 'esbuild';
+import { copy } from 'esbuild-plugin-copy';
+import * as process from 'process';
 
 const prod = process.argv[2] === 'production';
 

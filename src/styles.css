@@ -93,13 +93,65 @@
     margin-bottom: 20px;
 }
 
+/* 颜色表格样式 */
+.list-heatmap-color-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+.list-heatmap-color-table th,
+.list-heatmap-color-table td {
+    padding: 8px;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.list-heatmap-color-table th {
+    text-align: left;
+    font-weight: bold;
+}
+
+.list-heatmap-range-input {
+    width: 60px;
+    margin-right: 5px;
+    padding: 4px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+}
+
 .list-heatmap-color-preview {
     display: inline-block;
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     border-radius: 3px;
-    margin-right: 5px;
+    margin-right: 8px;
     vertical-align: middle;
+    border: 1px solid var(--background-modifier-border);
+}
+
+.list-heatmap-color-input {
+    width: 80px;
+    padding: 4px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    margin-right: 8px;
+}
+
+.list-heatmap-delete-range-btn {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    background-color: var(--background-modifier-error);
+    color: var(--text-on-accent);
+}
+
+.list-heatmap-add-range-btn {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    margin-top: 10px;
 }
 
 /* 响应式调整 */

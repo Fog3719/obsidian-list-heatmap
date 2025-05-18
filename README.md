@@ -1,66 +1,72 @@
 # Obsidian List Heatmap Plugin
 
-An Obsidian plugin that counts unordered list items under specific headings in daily notes and displays them in GitHub-style heatmap in the sidebar.
+This is an Obsidian plugin that counts unordered lists under specific headings in diary files and displays the data as a GitHub-style heatmap in the sidebar panel.
 
 ![](image/image.png)
 
 > [!TIP]
-> This plugin was developed by LLM. Any issues can be fixed by LLM.
+> This plugin was developed with the help of an LLM. Any issues encountered during use can be resolved with assistance from the LLM.
 
 ## Features
-![](image/image_01.png)
-- Counts unordered list items under user-defined headings in daily notes (YYYY-MM-DD format)
-- Visualizes statistics in GitHub-style heatmap in the sidebar panel
-- Supports both year view and month view
-- Customizable heatmap color ranges
-- Data persistence with local caching
-- Manual refresh functionality
-- Automatically clears cache when path or headings are changed
+
+- Count unordered lists under user-defined headings in diary files (YYYY-MM-DD format)
+- Display the data as a GitHub-style heatmap in the sidebar panel
+- Support both year and month views
+- Customize heatmap colors based on list count ranges
+- Data caching for improved performance
+- Manual refresh option
+- Click on heatmap cells to open the corresponding diary file
+- Hover over cells to see file details and list counts
 
 ## Installation
 
-### Manual Installation
-
-1. Download the latest release package
-2. Extract the downloaded file
-3. Copy the extracted folder to Obsidian plugins directory (`.obsidian/plugins/`)
-4. Enable the plugin in Obsidian
-
-### Via BRAT
-
-1. Install [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin
-2. Add this repository URL in BRAT settings
-3. Enable the plugin in Obsidian
+1. Download the latest release from the Releases section
+2. Extract the zip file into your Obsidian plugins folder: `{vault}/.obsidian/plugins/`
+3. Enable the plugin in Obsidian settings
 
 ## Usage
 
-1. After installation, a calendar icon will appear in the right sidebar
-2. Click the icon to open the list heatmap panel
-3. Configure diary folder path and headings to count in plugin settings
-4. The heatmap will automatically show daily unordered list counts
+1. After enabling the plugin, click the calendar icon in the ribbon to open the heatmap panel
+2. Configure the plugin settings:
+   - Set the diary folder path
+   - Define the headings under which to count lists
+   - Customize color ranges
+   - Choose default view (year or month)
 
-## Configuration
+## Settings
 
-- **Diary folder path**: Specify the folder path containing diary files
-- **Count headings**: Specify headings to count unordered lists under (comma separated)
-- **Heatmap color settings**: Customize heatmap color ranges
-- **Default view**: Set default time range for heatmap display (year or month view)
-- **Enable cache**: Enable data caching for better performance
+- **Diary Folder Path**: Path to the folder containing your diary files
+- **Count Titles**: Headings under which to count unordered lists (comma-separated)
+- **Heatmap Color Settings**: Define color ranges for different list counts
+- **Default View**: Choose between year and month view
+- **Enable Cache**: Toggle data caching for improved performance
 
 ## Development
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/)
-- [pnpm](https://pnpm.io/) (recommended) or npm
+- Node.js and npm
 
-### Local Development
+### Building the plugin
 
 1. Clone this repository
-2. Install dependencies: `pnpm install` or `npm install`
-3. Build plugin: `pnpm build` or `npm run build`
-4. Development mode: `pnpm dev` or `npm run dev`
+2. Install dependencies: `npm install`
+```
+npm install
+npm install -g typescript
+npm install --save-dev esbuild@0.14.0 esbuild-plugin-copy@latest
+```
+3. Build the plugin: `npm run build`
 
 ## License
 
-[MIT](LICENSE)
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgements
+
+- Inspired by GitHub's contribution heatmap
+- Built for Obsidian (https://obsidian.md)
+
+## Support
+
+If you encounter any issues or have suggestions for improvements, please open an issue on the GitHub repository.

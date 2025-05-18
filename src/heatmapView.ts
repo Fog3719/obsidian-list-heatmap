@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf } from 'obsidian';
+import { ItemView, WorkspaceLeaf, TFile } from 'obsidian';
 import { ListHeatmapSettings } from './settings';
 import ListHeatmapPlugin from './main';
 import { ListCountResult } from './listCounter';
@@ -6,14 +6,24 @@ import * as d3 from 'd3';
 
 export const VIEW_TYPE_HEATMAP = 'list-heatmap-view';
 
+interface HeatmapDayData {
+    date: string;
+    day: number;
+    week?: number;
+    count: number;
+    filename?: string; // Add filename property for hover display and click navigation
+}
+
 export class HeatmapView extends ItemView {
     private plugin: ListHeatmapPlugin;
-    public contentEl: HTMLElement;
     private heatmapContainer: HTMLElement;
     private controlsContainer: HTMLElement;
+    private lastUpdatedContainer: HTMLElement; // Container for last updated time
     private currentView: 'year' | 'month';
     private currentYear: number;
     private currentMonth: number;
+    // Change contentEl to protected to avoid conflict with base class
+    protected heatmapContentEl: HTMLElement;
 
     constructor(leaf: WorkspaceLeaf, plugin: ListHeatmapPlugin) {
         super(leaf);
@@ -34,86 +44,89 @@ export class HeatmapView extends ItemView {
     }
 
     async onOpen(): Promise<void> {
-        // 创建视图容器
-        this.contentEl = this.containerEl.children[1].createDiv({ cls: 'list-heatmap-container' });
+        // Create view container
+        this.heatmapContentEl = this.containerEl.children[1].createDiv({ cls: 'list-heatmap-container' });
         
-        // 创建控制区域
-        this.controlsContainer = this.contentEl.createDiv({ cls: 'list-heatmap-controls' });
+        // Create controls area
+        this.controlsContainer = this.heatmapContentEl.createDiv({ cls: 'list-heatmap-controls' });
         this.createControls();
         
-        // 创建热图容器
-        this.heatmapContainer = this.contentEl.createDiv({ cls: 'list-heatmap-chart' });
+        // Create heatmap container
+        this.heatmapContainer = this.heatmapContentEl.createDiv({ cls: 'list-heatmap-chart' });
         
-        // 初始渲染热图
+        // Create last updated time container
+        this.lastUpdatedContainer = this.heatmapContentEl.createDiv({ cls: 'list-heatmap-last-updated' });
+        
+        // Initial heatmap rendering
         await this.refresh();
     }
 
     async onClose(): Promise<void> {
-        // 清理视图
-        this.contentEl.empty();
+        // Clean up view
+        this.heatmapContentEl.empty();
     }
 
     /**
-     * 刷新热图视图
+     * Refresh heatmap view
      */
     async refresh(): Promise<void> {
-        // 清空热图容器
+        // Clear heatmap container
         this.heatmapContainer.empty();
         
-        // 获取数据
+        // Clear last updated time container
+        this.lastUpdatedContainer.empty();
+        
+        // Get data
         let data: ListCountResult | null = null;
         
-        // 尝试从缓存获取数据
+        // Try to get data from cache
         if (this.plugin.settings.cacheEnabled) {
             data = await this.plugin.dataCache.getCachedData(this.plugin.settings);
         }
         
-        // 如果缓存无效，重新获取数据
+        // If cache is invalid, refresh data
         if (!data) {
             await this.plugin.refreshData();
             data = await this.plugin.dataCache.getCachedData(this.plugin.settings);
         }
         
-        // 如果仍然没有数据，显示提示信息
+        // If still no data, show message
         if (!data) {
             this.heatmapContainer.createEl('div', { 
-                text: 'No data to display. Please ensure correct diary folder path and headings are set, then click refresh button.',
+                text: 'No data to display. Please make sure you have set the correct diary folder path and titles to count, then click the refresh button.',
                 cls: 'list-heatmap-no-data'
             });
             return;
         }
         
-        // 渲染热图
+        // Render heatmap
         if (this.currentView === 'year') {
             this.renderYearHeatmap(data);
         } else {
             this.renderMonthHeatmap(data);
         }
         
-        // 显示最后更新时间
+        // Show last updated time (only one entry)
         const lastUpdated = this.plugin.dataCache.getLastUpdated();
         if (lastUpdated) {
             const dateStr = new Date(lastUpdated).toLocaleString();
-            this.contentEl.createEl('div', { 
-                text: `Last updated: ${dateStr}`,
-                cls: 'list-heatmap-last-updated'
-            });
+            this.lastUpdatedContainer.setText(`Last updated: ${dateStr}`);
         }
     }
 
     /**
-     * 创建控制区域
+     * Create controls area
      */
     private createControls(): void {
-        // 清空控制区域
+        // Clear controls area
         this.controlsContainer.empty();
         
-        // 创建视图切换按钮
+        // Create view toggle buttons
         const viewToggle = this.controlsContainer.createDiv({ cls: 'list-heatmap-view-toggle' });
         
-        // 年视图按钮
+        // Year view button
         const yearBtn = viewToggle.createEl('button', { 
-            text: 'Year view',
+            text: 'Year View',
             cls: this.currentView === 'year' ? 'active' : ''
         });
         yearBtn.addEventListener('click', () => {
@@ -121,9 +134,9 @@ export class HeatmapView extends ItemView {
             this.refresh();
         });
         
-        // 月视图按钮
+        // Month view button
         const monthBtn = viewToggle.createEl('button', { 
-            text: 'Month view',
+            text: 'Month View',
             cls: this.currentView === 'month' ? 'active' : ''
         });
         monthBtn.addEventListener('click', () => {
@@ -131,10 +144,10 @@ export class HeatmapView extends ItemView {
             this.refresh();
         });
         
-        // 创建时间导航
+        // Create time navigation
         const timeNav = this.controlsContainer.createDiv({ cls: 'list-heatmap-time-nav' });
         
-        // 上一年/月按钮
+        // Previous year/month button
         const prevBtn = timeNav.createEl('button', { text: '←' });
         prevBtn.addEventListener('click', () => {
             if (this.currentView === 'year') {
@@ -149,14 +162,14 @@ export class HeatmapView extends ItemView {
             this.refresh();
         });
         
-        // 当前年/月显示
+        // Current year/month display
         const currentTime = timeNav.createEl('span', { 
             text: this.currentView === 'year' 
                 ? `${this.currentYear}` 
-                : `${this.currentYear} ${this.currentMonth}`
+                : `${this.currentYear}-${this.currentMonth.toString().padStart(2, '0')}`
         });
         
-        // 下一年/月按钮
+        // Next year/month button
         const nextBtn = timeNav.createEl('button', { text: '→' });
         nextBtn.addEventListener('click', () => {
             if (this.currentView === 'year') {
@@ -171,9 +184,9 @@ export class HeatmapView extends ItemView {
             this.refresh();
         });
         
-        // 刷新按钮
+        // Refresh button
         const refreshBtn = this.controlsContainer.createEl('button', { 
-            text: 'Refresh data',
+            text: 'Refresh Data',
             cls: 'list-heatmap-refresh-btn'
         });
         refreshBtn.addEventListener('click', async () => {
@@ -183,14 +196,14 @@ export class HeatmapView extends ItemView {
     }
 
     /**
-     * 渲染年度热图
-     * @param data 统计数据
+     * Render year heatmap
+     * @param data Statistics data
      */
     private renderYearHeatmap(data: ListCountResult): void {
-        // 准备数据
+        // Prepare data
         const yearData = this.prepareYearData(data, this.currentYear);
         
-        // 设置尺寸和边距
+        // Set size and margins
         const cellSize = 12;
         const cellMargin = 2;
         const weekCount = 53;
@@ -199,7 +212,7 @@ export class HeatmapView extends ItemView {
         const height = (cellSize + cellMargin) * dayCount;
         const margin = { top: 20, right: 20, bottom: 20, left: 40 };
         
-        // 创建 SVG 容器
+        // Create SVG container
         const svg = d3.select(this.heatmapContainer)
             .append('svg')
             .attr('width', width + margin.left + margin.right)
@@ -207,7 +220,7 @@ export class HeatmapView extends ItemView {
             .append('g')
             .attr('transform', `translate(${margin.left},${margin.top})`);
         
-        // 创建星期标签
+        // Create weekday labels
         const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         svg.selectAll('.weekday-label')
             .data(weekdays)
@@ -215,12 +228,12 @@ export class HeatmapView extends ItemView {
             .append('text')
             .attr('class', 'weekday-label')
             .attr('x', -5)
-            .attr('y', (d, i) => (cellSize + cellMargin) * i + cellSize / 2)
+            .attr('y', (d: string, i: number) => (cellSize + cellMargin) * i + cellSize / 2)
             .attr('text-anchor', 'end')
             .attr('dominant-baseline', 'middle')
-            .text(d => d);
+            .text((d: string) => d);
         
-        // 创建月份标签
+        // Create month labels
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const monthPositions = this.getMonthPositions(this.currentYear);
         
@@ -229,14 +242,16 @@ export class HeatmapView extends ItemView {
             .enter()
             .append('text')
             .attr('class', 'month-label')
-            .attr('x', (d, i) => {
+            .attr('x', (d: string, i: number) => {
                 const pos = monthPositions[i];
                 return pos ? (cellSize + cellMargin) * pos.week : 0;
             })
             .attr('y', -5)
-            .text(d => d);
+            .text((d: string) => d);
         
-        // 创建热图单元格
+        // Create heatmap cells
+        const plugin = this.plugin;
+        
         svg.selectAll('.day')
             .data(yearData)
             .enter()
@@ -244,38 +259,50 @@ export class HeatmapView extends ItemView {
             .attr('class', 'day')
             .attr('width', cellSize)
             .attr('height', cellSize)
-            .attr('x', d => (cellSize + cellMargin) * d.week)
-            .attr('y', d => (cellSize + cellMargin) * d.day)
-            .attr('fill', d => this.getColorForCount(d.count))
+            .attr('x', (d: HeatmapDayData) => (cellSize + cellMargin) * (d.week || 0))
+            .attr('y', (d: HeatmapDayData) => (cellSize + cellMargin) * d.day)
+            .attr('fill', (d: HeatmapDayData) => this.getColorForCount(d.count))
             .attr('rx', 2)
             .attr('ry', 2)
+            .attr('cursor', (d: HeatmapDayData) => d.filename ? 'pointer' : 'default')
+            .on('click', function(event: MouseEvent, d: HeatmapDayData) {
+                if (d.filename) {
+                    plugin.openDiaryFile(d.filename);
+                }
+            })
             .append('title')
-            .text(d => `${d.date}: ${d.count} items`);
+            .text((d: HeatmapDayData) => {
+                let tooltip = `${d.date}: ${d.count} list items`;
+                if (d.filename) {
+                    tooltip += `\nFile: ${d.filename}`;
+                }
+                return tooltip;
+            });
     }
 
     /**
-     * 渲染月度热图
-     * @param data 统计数据
+     * Render month heatmap
+     * @param data Statistics data
      */
     private renderMonthHeatmap(data: ListCountResult): void {
-        // 准备数据
+        // Prepare data
         const monthData = this.prepareMonthData(data, this.currentYear, this.currentMonth);
         
-        // 计算日历布局
+        // Calculate calendar layout
         const firstDay = new Date(this.currentYear, this.currentMonth - 1, 1);
-        const startDay = firstDay.getDay(); // 0 = 周日, 1 = 周一, ...
+        const startDay = firstDay.getDay(); // 0 = Sunday, 1 = Monday, ...
         const daysInMonth = new Date(this.currentYear, this.currentMonth, 0).getDate();
         
-        // 设置尺寸和边距
+        // Set size and margins
         const cellSize = 40;
         const cellMargin = 5;
-        const colCount = 7; // 一周7天
+        const colCount = 7; // 7 days in a week
         const rowCount = Math.ceil((daysInMonth + startDay) / colCount);
         const width = (cellSize + cellMargin) * colCount;
         const height = (cellSize + cellMargin) * rowCount;
         const margin = { top: 40, right: 20, bottom: 20, left: 20 };
         
-        // 创建 SVG 容器
+        // Create SVG container
         const svg = d3.select(this.heatmapContainer)
             .append('svg')
             .attr('width', width + margin.left + margin.right)
@@ -283,43 +310,51 @@ export class HeatmapView extends ItemView {
             .append('g')
             .attr('transform', `translate(${margin.left},${margin.top})`);
         
-        // 创建星期标签
-        const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+        // Create weekday labels
+        const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         svg.selectAll('.weekday-label')
             .data(weekdays)
             .enter()
             .append('text')
             .attr('class', 'weekday-label')
-            .attr('x', (d, i) => (cellSize + cellMargin) * i + cellSize / 2)
+            .attr('x', (d: string, i: number) => (cellSize + cellMargin) * i + cellSize / 2)
             .attr('y', -15)
             .attr('text-anchor', 'middle')
-            .text(d => d);
+            .text((d: string) => d);
         
-        // 创建日期单元格
-        const view = this;
+        // Create date cells
+        const getColorForCount = this.getColorForCount.bind(this);
+        const plugin = this.plugin;
+        
         svg.selectAll('.day')
             .data(monthData)
             .enter()
             .append('g')
             .attr('class', 'day-cell')
-            .attr('transform', d => {
+            .attr('transform', (d: HeatmapDayData) => {
                 const col = (d.day + startDay - 1) % 7;
                 const row = Math.floor((d.day + startDay - 1) / 7);
                 return `translate(${(cellSize + cellMargin) * col}, ${(cellSize + cellMargin) * row})`;
             })
-            .each(function(d) {
-                // 创建日期背景
-                d3.select(this)
-                    .append('rect')
+            .attr('cursor', (d: HeatmapDayData) => d.filename ? 'pointer' : 'default')
+            .on('click', function(event: MouseEvent, d: HeatmapDayData) {
+                if (d.filename) {
+                    plugin.openDiaryFile(d.filename);
+                }
+            })
+            .each(function(d: HeatmapDayData) {
+                const self = d3.select(this);
+                
+                // Create date background
+                self.append('rect')
                     .attr('width', cellSize)
                     .attr('height', cellSize)
-                    .attr('fill', d.count > 0 ? view.getColorForCount(d.count) : '#f0f0f0')
+                    .attr('fill', d.count > 0 ? getColorForCount(d.count) : '#f0f0f0')
                     .attr('rx', 4)
                     .attr('ry', 4);
                 
-                // 创建日期文本
-                d3.select(this)
-                    .append('text')
+                // Create date text
+                self.append('text')
                     .attr('x', cellSize / 2)
                     .attr('y', cellSize / 3)
                     .attr('text-anchor', 'middle')
@@ -327,10 +362,9 @@ export class HeatmapView extends ItemView {
                     .attr('fill', d.count > 10 ? '#fff' : '#333')
                     .text(d.day);
                 
-                // 创建计数文本
+                // Create count text
                 if (d.count > 0) {
-                    d3.select(this)
-                        .append('text')
+                    self.append('text')
                         .attr('x', cellSize / 2)
                         .attr('y', cellSize * 2/3)
                         .attr('text-anchor', 'middle')
@@ -339,67 +373,82 @@ export class HeatmapView extends ItemView {
                         .attr('font-size', '0.8em')
                         .text(d.count);
                 }
+                
+                // Add hover tooltip
+                if (d.filename) {
+                    self.append('title')
+                        .text(`${d.date}: ${d.count} list items\nFile: ${d.filename}`);
+                } else {
+                    self.append('title')
+                        .text(`${d.date}: ${d.count} list items`);
+                }
             });
     }
 
     /**
-     * 准备年度数据
-     * @param data 原始统计数据
-     * @param year 年份
-     * @returns 处理后的年度数据
+     * Prepare year data
+     * @param data Original statistics data
+     * @param year Year
+     * @returns Processed year data
      */
-    private prepareYearData(data: ListCountResult, year: number): Array<{date: string, day: number, week: number, count: number}> {
-        const result = [];
+    private prepareYearData(data: ListCountResult, year: number): HeatmapDayData[] {
+        const result: HeatmapDayData[] = [];
         const yearStart = new Date(year, 0, 1);
         const yearEnd = new Date(year, 11, 31);
         
-        // 遍历年份中的每一天
+        // Iterate through each day of the year
         for (let d = new Date(yearStart); d <= yearEnd; d.setDate(d.getDate() + 1)) {
             const date = d.toISOString().split('T')[0]; // YYYY-MM-DD
-            const day = d.getDay(); // 0 = 周日, 1 = 周一, ...
+            const day = d.getDay(); // 0 = Sunday, 1 = Monday, ...
             
-            // 计算周数 (相对于年初)
+            // Calculate week number (relative to year start)
             const dayOfYear = Math.floor((d.getTime() - yearStart.getTime()) / (24 * 60 * 60 * 1000));
             const week = Math.floor(dayOfYear / 7);
             
-            // 获取计数，如果没有则为0
+            // Get count, default to 0 if none
             const count = data[date] || 0;
             
-            result.push({ date, day, week, count });
+            // Get filename (if any)
+            const filename = this.plugin.getDiaryFilename(date);
+            
+            result.push({ date, day, week, count, filename });
         }
         
         return result;
     }
 
     /**
-     * 准备月度数据
-     * @param data 原始统计数据
-     * @param year 年份
-     * @param month 月份
-     * @returns 处理后的月度数据
+     * Prepare month data
+     * @param data Original statistics data
+     * @param year Year
+     * @param month Month
+     * @returns Processed month data
      */
-    private prepareMonthData(data: ListCountResult, year: number, month: number): Array<{date: string, day: number, count: number}> {
-        const result = [];
+    private prepareMonthData(data: ListCountResult, year: number, month: number): HeatmapDayData[] {
+        const result: HeatmapDayData[] = [];
         const daysInMonth = new Date(year, month, 0).getDate();
         
-        // 遍历月份中的每一天
+        // Iterate through each day of the month
         for (let day = 1; day <= daysInMonth; day++) {
             const d = new Date(year, month - 1, day);
             const date = d.toISOString().split('T')[0]; // YYYY-MM-DD
             
-            // 获取计数，如果没有则为0
+            // Get count, default to 0 if none
             const count = data[date] || 0;
             
-            result.push({ date, day, count });
+            // Get filename (if any)
+            const filename = this.plugin.getDiaryFilename(date);
+            
+            result.push({ date, day, count, filename });
         }
         
         return result;
     }
 
     /**
-     * 获取月份位置
-     * @param year 年份
-     * @returns 月份位置数组
+     * Get month positions
+     * @param year Year
+     * @returns Month positions array
      */
     private getMonthPositions(year: number): Array<{week: number, day: number} | null> {
         const positions = [];
@@ -417,24 +466,24 @@ export class HeatmapView extends ItemView {
     }
 
     /**
-     * 根据计数获取颜色
-     * @param count 计数值
-     * @returns 颜色代码
+     * Get color based on count
+     * @param count Count value
+     * @returns Color code
      */
     getColorForCount(count: number): string {
-        // 如果计数为0，返回默认颜色
+        // If count is 0, return default color
         if (count === 0) {
             return '#ebedf0';
         }
         
-        // 根据设置的颜色范围获取颜色
+        // Get color based on settings color ranges
         for (const range of this.plugin.settings.colorRanges) {
             if (count >= range.min && count <= range.max) {
                 return range.color;
             }
         }
         
-        // 如果没有匹配的范围，返回最后一个颜色
+        // If no matching range, return the last color
         return this.plugin.settings.colorRanges[this.plugin.settings.colorRanges.length - 1].color;
     }
 }

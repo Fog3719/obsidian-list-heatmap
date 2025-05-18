@@ -6,61 +6,95 @@ export interface ListCountResult {
 }
 
 export class ListCounter {
-    private fileParser: FileParser;
+    private fileParser: FileParser | null = null;
 
-    constructor() {
-        // FileParser 将在使用时由主插件类提供
+    /**
+     * Set the file parser
+     * @param fileParser File parser instance
+     */
+    setFileParser(fileParser: FileParser): void {
+        this.fileParser = fileParser;
     }
 
     /**
-     * 统计文件中特定标题下的无序列表数量
-     * @param files 日记文件列表
-     * @param titles 要统计的标题列表
-     * @returns 按日期统计的列表数量
+     * Count unordered lists under specified titles in diary files
+     * @param files Array of diary files
+     * @param titles Array of titles to count lists under
+     * @returns Object with dates as keys and list counts as values
      */
     async countLists(files: TFile[], titles: string[]): Promise<ListCountResult> {
+        if (!this.fileParser) {
+            throw new Error('File parser not set');
+        }
+
         const result: ListCountResult = {};
-        
-        // 如果没有指定标题，返回空结果
-        if (!titles || titles.length === 0) {
-            return result;
-        }
-        
-        // 遍历所有文件
+
+        // Process each file
         for (const file of files) {
-            try {
-                // 获取文件日期
-                const date = this.fileParser.getFileDate(file);
-                
-                // 读取文件内容
-                const content = await this.fileParser.parseFile(file);
-                
-                // 解析文件内容
-                const parsedContent = this.fileParser.parseContent(content);
-                
-                // 统计指定标题下的无序列表数量
-                let count = 0;
-                for (const title of titles) {
-                    if (parsedContent[title]) {
-                        count += parsedContent[title].length;
-                    }
-                }
-                
-                // 记录结果
-                result[date] = count;
-            } catch (error) {
-                console.error(`处理文件 ${file.name} 时出错:`, error);
-            }
+            // Get date from filename
+            const date = file.basename;
+            
+            // Read file content
+            const content = await this.fileParser.readFileContent(file);
+            
+            // Count lists under specified titles
+            const count = this.countListsInContent(content, titles);
+            
+            // Store result
+            result[date] = count;
         }
-        
+
         return result;
     }
 
     /**
-     * 设置文件解析器
-     * @param parser 文件解析器实例
+     * Count unordered lists under specified titles in content
+     * @param content File content
+     * @param titles Array of titles to count lists under
+     * @returns Total count of list items
      */
-    setFileParser(parser: FileParser) {
-        this.fileParser = parser;
+    private countListsInContent(content: string, titles: string[]): number {
+        let totalCount = 0;
+        
+        // Process each title
+        for (const title of titles) {
+            // Find title in content
+            const titleRegex = new RegExp(`#+\\s+${this.escapeRegExp(title)}`, 'i');
+            const titleMatch = content.match(titleRegex);
+            
+            if (titleMatch && titleMatch.index !== undefined) {
+                // Get title position
+                const titlePos = titleMatch.index;
+                
+                // Find next title or end of content
+                const nextTitleMatch = content.slice(titlePos + 1).match(/#+\s+/);
+                const nextTitlePos = nextTitleMatch && nextTitleMatch.index !== undefined
+                    ? titlePos + 1 + nextTitleMatch.index 
+                    : content.length;
+                
+                // Get content between titles
+                const sectionContent = content.slice(titlePos, nextTitlePos);
+                
+                // Count unordered list items
+                const listItemRegex = /^\s*-\s+/gm;
+                const listItems = sectionContent.match(listItemRegex);
+                
+                // Add to total count
+                if (listItems) {
+                    totalCount += listItems.length;
+                }
+            }
+        }
+        
+        return totalCount;
+    }
+
+    /**
+     * Escape special characters in string for use in regex
+     * @param string String to escape
+     * @returns Escaped string
+     */
+    private escapeRegExp(string: string): string {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 }

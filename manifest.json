@@ -3,8 +3,8 @@
   "name": "List Heatmap",
   "version": "1.0.0",
   "minAppVersion": "0.15.0",
-  "description": "Counts unordered list items under specific headings in daily notes and displays them in GitHub-style heatmap",
-  "author": "",
-  "authorUrl": "",
+  "description": "Count unordered lists under specific headings in diary files and display as a GitHub-style heatmap.",
+  "author": "List Heatmap",
+  "authorUrl": "https://github.com/Fog3719/obsidian_heartrate_graph",
   "isDesktopOnly": false
 }
