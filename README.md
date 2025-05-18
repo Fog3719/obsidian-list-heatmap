@@ -53,8 +53,8 @@ This is an Obsidian plugin that counts unordered lists under specific headings i
 2. Install dependencies: `npm install`
 ```
 npm install
-npm install -g typescript
 npm install --save-dev esbuild@0.14.0 esbuild-plugin-copy@latest
+npm install --save-dev typescript@4.9.5
 ```
 3. Build the plugin: `npm run build`
 
