@@ -1,4 +1,5 @@
 # Obsidian List Heatmap Plugin
+[中文文档](README_zh.md)
 
 This is an Obsidian plugin that counts unordered lists under specific headings in diary files and displays the data as a GitHub-style heatmap in the sidebar panel.
 
