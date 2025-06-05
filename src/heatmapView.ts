@@ -19,6 +19,7 @@ export class HeatmapView extends ItemView {
     private heatmapContainer: HTMLElement;
     private controlsContainer: HTMLElement;
     private lastUpdatedContainer: HTMLElement; // Container for last updated time
+    private statsContainer: HTMLElement; // Container for statistics
     private currentView: 'year' | 'month';
     private currentYear: number;
     private currentMonth: number;
@@ -57,6 +58,9 @@ export class HeatmapView extends ItemView {
         // Create last updated time container
         this.lastUpdatedContainer = this.heatmapContentEl.createDiv({ cls: 'list-heatmap-last-updated' });
         
+        // Create statistics container
+        this.statsContainer = this.heatmapContentEl.createDiv({ cls: 'list-heatmap-stats' });
+        
         // Initial heatmap rendering
         await this.refresh();
     }
@@ -75,6 +79,9 @@ export class HeatmapView extends ItemView {
         
         // Clear last updated time container
         this.lastUpdatedContainer.empty();
+        
+        // Clear statistics container
+        this.statsContainer.empty();
         
         // Get data
         let data: ListCountResult | null = null;
@@ -111,6 +118,45 @@ export class HeatmapView extends ItemView {
         if (lastUpdated) {
             const dateStr = new Date(lastUpdated).toLocaleString();
             this.lastUpdatedContainer.setText(`Last updated: ${dateStr}`);
+        }
+        
+        // Show statistics if data exists
+        if (data) {
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+            
+            let totalDays = 0;
+            let totalCount = 0;
+            
+            if (this.currentView === 'year') {
+                const yearData = this.prepareYearData(data, this.currentYear);
+                totalCount = yearData.reduce((sum, day) => sum + day.count, 0);
+                
+                // For the current year, only count days up to today
+                if (this.currentYear === now.getFullYear()) {
+                    totalDays = yearData.filter(d => d.date <= todayStr).length;
+                } 
+                // For past years, use full year
+                else {
+                    totalDays = yearData.length;
+                }
+            } else {
+                const monthData = this.prepareMonthData(data, this.currentYear, this.currentMonth);
+                totalCount = monthData.reduce((sum, day) => sum + day.count, 0);
+                
+                // For the current month, only count days up to today
+                if (this.currentYear === now.getFullYear() && this.currentMonth === now.getMonth() + 1) {
+                    totalDays = monthData.filter(d => d.date <= todayStr).length;
+                } 
+                // For past months, use full month
+                else {
+                    totalDays = monthData.length;
+                }
+            }
+            
+            const avgCount = totalDays > 0 ? (totalCount / totalDays).toFixed(1) : '0';
+            this.statsContainer.createEl('div', { text: `Total Days: ${totalDays}` });
+            this.statsContainer.createEl('div', { text: `Daily Average: ${avgCount}` });
         }
     }
 
@@ -219,19 +265,6 @@ export class HeatmapView extends ItemView {
             .attr('height', height + margin.top + margin.bottom)
             .append('g')
             .attr('transform', `translate(${margin.left},${margin.top})`);
-        
-        // Create weekday labels
-        const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        svg.selectAll('.weekday-label')
-            .data(weekdays)
-            .enter()
-            .append('text')
-            .attr('class', 'weekday-label')
-            .attr('x', -5)
-            .attr('y', (d: string, i: number) => (cellSize + cellMargin) * i + cellSize / 2)
-            .attr('text-anchor', 'end')
-            .attr('dominant-baseline', 'middle')
-            .text((d: string) => d);
         
         // Create month labels
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

@@ -2695,6 +2695,7 @@ var HeatmapView = class extends import_obsidian2.ItemView {
       this.createControls();
       this.heatmapContainer = this.heatmapContentEl.createDiv({ cls: "list-heatmap-chart" });
       this.lastUpdatedContainer = this.heatmapContentEl.createDiv({ cls: "list-heatmap-last-updated" });
+      this.statsContainer = this.heatmapContentEl.createDiv({ cls: "list-heatmap-stats" });
       yield this.refresh();
     });
   }
@@ -2707,6 +2708,7 @@ var HeatmapView = class extends import_obsidian2.ItemView {
     return __async(this, null, function* () {
       this.heatmapContainer.empty();
       this.lastUpdatedContainer.empty();
+      this.statsContainer.empty();
       let data = null;
       if (this.plugin.settings.cacheEnabled) {
         data = yield this.plugin.dataCache.getCachedData(this.plugin.settings);
@@ -2731,6 +2733,32 @@ var HeatmapView = class extends import_obsidian2.ItemView {
       if (lastUpdated) {
         const dateStr = new Date(lastUpdated).toLocaleString();
         this.lastUpdatedContainer.setText(`Last updated: ${dateStr}`);
+      }
+      if (data) {
+        const now2 = new Date();
+        const todayStr = now2.toISOString().split("T")[0];
+        let totalDays = 0;
+        let totalCount = 0;
+        if (this.currentView === "year") {
+          const yearData = this.prepareYearData(data, this.currentYear);
+          totalCount = yearData.reduce((sum, day) => sum + day.count, 0);
+          if (this.currentYear === now2.getFullYear()) {
+            totalDays = yearData.filter((d) => d.date <= todayStr).length;
+          } else {
+            totalDays = yearData.length;
+          }
+        } else {
+          const monthData = this.prepareMonthData(data, this.currentYear, this.currentMonth);
+          totalCount = monthData.reduce((sum, day) => sum + day.count, 0);
+          if (this.currentYear === now2.getFullYear() && this.currentMonth === now2.getMonth() + 1) {
+            totalDays = monthData.filter((d) => d.date <= todayStr).length;
+          } else {
+            totalDays = monthData.length;
+          }
+        }
+        const avgCount = totalDays > 0 ? (totalCount / totalDays).toFixed(1) : "0";
+        this.statsContainer.createEl("div", { text: `Total Days: ${totalDays}` });
+        this.statsContainer.createEl("div", { text: `Daily Average: ${avgCount}` });
       }
     });
   }
@@ -2802,8 +2830,6 @@ var HeatmapView = class extends import_obsidian2.ItemView {
     const height = (cellSize + cellMargin) * dayCount;
     const margin = { top: 20, right: 20, bottom: 20, left: 40 };
     const svg = select_default2(this.heatmapContainer).append("svg").attr("width", width + margin.left + margin.right).attr("height", height + margin.top + margin.bottom).append("g").attr("transform", `translate(${margin.left},${margin.top})`);
-    const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    svg.selectAll(".weekday-label").data(weekdays).enter().append("text").attr("class", "weekday-label").attr("x", -5).attr("y", (d, i) => (cellSize + cellMargin) * i + cellSize / 2).attr("text-anchor", "end").attr("dominant-baseline", "middle").text((d) => d);
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const monthPositions = this.getMonthPositions(this.currentYear);
     svg.selectAll(".month-label").data(months).enter().append("text").attr("class", "month-label").attr("x", (d, i) => {
